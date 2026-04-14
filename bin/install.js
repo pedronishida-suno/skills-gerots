@@ -5,13 +5,13 @@
  *
  * Uso:
  *   npx super-gerots install    → Copia skills para /mnt/skills/user/
- *   npx super-gerots sync       → Lê patches e cria PRs no GitHub
+ *   npx super-gerots sync       → Lê patches e cria PRs no GitHub via gh CLI
  *   npx super-gerots status     → Mostra feedback pendente
+ *   npx super-gerots setup      → Checa dependências e autenticação
  *
  * Requisitos:
  *   - Node.js 18+
- *   - Git configurado
- *   - GITHUB_TOKEN no env (para sync)
+ *   - GitHub CLI (gh) instalado e autenticado (para sync)
  */
 
 const fs = require("fs");
@@ -23,20 +23,123 @@ const SKILLS_TARGET = "/mnt/skills/user";
 const PATCHES_DIR = path.join(SKILLS_TARGET, "patches");
 const FEEDBACK_FILE = path.join(SKILLS_TARGET, "FEEDBACK.md");
 
-const REPO_OWNER = process.env.GEROTS_REPO_OWNER || "seu-usuario";
-const REPO_NAME = process.env.GEROTS_REPO_NAME || "super-gerots";
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-
 // ─── Cores pra terminal ────────────────────────────────────────
 const c = {
   green: (s) => `\x1b[32m${s}\x1b[0m`,
   yellow: (s) => `\x1b[33m${s}\x1b[0m`,
   red: (s) => `\x1b[31m${s}\x1b[0m`,
   bold: (s) => `\x1b[1m${s}\x1b[0m`,
+  dim: (s) => `\x1b[2m${s}\x1b[0m`,
 };
+
+// ─── Helpers ───────────────────────────────────────────────────
+const run = (cmd, opts = {}) => {
+  try {
+    return execSync(cmd, { stdio: "pipe", ...opts }).toString().trim();
+  } catch (e) {
+    return null;
+  }
+};
+
+function copyDirSync(src, dst) {
+  if (!fs.existsSync(dst)) fs.mkdirSync(dst, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const s = path.join(src, entry.name);
+    const d = path.join(dst, entry.name);
+    if (entry.isDirectory()) copyDirSync(s, d);
+    else fs.copyFileSync(s, d);
+  }
+}
+
+function extractTitle(content) {
+  const match = content.match(/^# Patch: (.+)/m);
+  return match ? match[1] : "Feedback patch";
+}
+
+function extractLabels(filename) {
+  const labels = [];
+  if (filename.includes("bug")) labels.push("bug");
+  else if (filename.includes("enhancement")) labels.push("enhancement");
+  else if (filename.includes("new-skill")) labels.push("new-skill");
+  else if (filename.includes("style")) labels.push("style");
+  else if (filename.includes("data-update")) labels.push("data-update");
+  labels.push("auto-feedback");
+  return labels;
+}
+
+function checkGh() {
+  if (!run("gh --version")) {
+    console.log(c.red("  ✗ GitHub CLI (gh) não encontrado."));
+    console.log("    Instale: brew install gh  |  sudo apt install gh");
+    console.log("    Docs: https://cli.github.com\n");
+    return false;
+  }
+  if (!run("gh auth status")) {
+    console.log(c.yellow("  ⚠ gh não autenticado. Iniciando login...\n"));
+    try {
+      execSync("gh auth login", { stdio: "inherit" });
+    } catch {
+      console.log(c.red("  ✗ Falha na autenticação.\n"));
+      return false;
+    }
+  }
+  return true;
+}
 
 // ─── Comandos ──────────────────────────────────────────────────
 const commands = {
+  setup() {
+    console.log(c.bold("\n🚀 Super Gerots — Setup\n"));
+
+    // Node
+    const nodeV = process.version;
+    const nodeMajor = parseInt(nodeV.slice(1));
+    if (nodeMajor >= 18) {
+      console.log(c.green(`  ✓ Node.js ${nodeV}`));
+    } else {
+      console.log(c.red(`  ✗ Node.js ${nodeV} (precisa >= 18)`));
+    }
+
+    // Git
+    const gitV = run("git --version");
+    if (gitV) {
+      console.log(c.green(`  ✓ ${gitV}`));
+    } else {
+      console.log(c.red("  ✗ Git não encontrado"));
+    }
+
+    // gh CLI
+    const ghV = run("gh --version");
+    if (ghV) {
+      const firstLine = ghV.split("\n")[0];
+      console.log(c.green(`  ✓ ${firstLine}`));
+
+      // Auth
+      const authOk = run("gh auth status");
+      if (authOk) {
+        console.log(c.green("  ✓ gh autenticado"));
+      } else {
+        console.log(c.yellow("  ⚠ gh não autenticado"));
+        console.log("    Execute: gh auth login\n");
+      }
+    } else {
+      console.log(c.red("  ✗ GitHub CLI (gh) não encontrado"));
+      console.log("    Instale: brew install gh  |  sudo apt install gh");
+    }
+
+    // Skills target
+    if (fs.existsSync(SKILLS_TARGET)) {
+      const count = fs
+        .readdirSync(SKILLS_TARGET, { withFileTypes: true })
+        .filter((d) => d.isDirectory()).length;
+      console.log(c.green(`  ✓ ${SKILLS_TARGET} existe (${count} skills)`));
+    } else {
+      console.log(c.yellow(`  ⚠ ${SKILLS_TARGET} não existe (será criado no install)`));
+    }
+
+    console.log(c.bold("\n✅ Setup completo.\n"));
+  },
+
   install() {
     console.log(c.bold("\n🔧 Super Gerots — Instalando skills...\n"));
 
@@ -69,7 +172,7 @@ const commands = {
       fs.mkdirSync(PATCHES_DIR, { recursive: true });
     }
 
-    console.log(c.bold("\n✅ Skills instaladas em " + SKILLS_TARGET));
+    console.log(c.bold(`\n✅ ${skills.length} skills instaladas em ${SKILLS_TARGET}`));
     console.log(
       "   O Claude vai detectar automaticamente na próxima conversa.\n"
     );
@@ -78,15 +181,13 @@ const commands = {
   sync() {
     console.log(c.bold("\n🔄 Super Gerots — Sincronizando patches...\n"));
 
-    if (!GITHUB_TOKEN) {
-      console.log(
-        c.red("  ✗ GITHUB_TOKEN não encontrado no ambiente.")
-      );
-      console.log(
-        "    Defina com: export GITHUB_TOKEN=ghp_seu_token\n"
-      );
+    if (!checkGh()) {
       process.exit(1);
     }
+
+    // Pull mais recente antes de criar branches
+    console.log(c.dim("  Atualizando repo local..."));
+    run("git pull --rebase origin main");
 
     if (!fs.existsSync(PATCHES_DIR)) {
       console.log(c.yellow("  Nenhum patch encontrado.\n"));
@@ -111,19 +212,43 @@ const commands = {
       );
       const title = extractTitle(content);
       const labels = extractLabels(patchFile);
+      const branchName = `feedback/${patchFile.replace(".patch.md", "")}`;
 
       console.log(c.yellow(`  → ${patchFile}`));
       console.log(`    Título: ${title}`);
       console.log(`    Labels: ${labels.join(", ")}`);
 
       try {
-        createGitHubPR({
-          title: `[feedback] ${title}`,
-          body: content,
-          branch: `feedback/${patchFile.replace(".patch.md", "")}`,
-          labels,
-        });
+        // Cria branch local
+        run(`git checkout -b ${branchName}`);
+
+        // Commit o patch como evidência
+        const patchDst = path.join("skills", "patches", patchFile);
+        const patchDstDir = path.dirname(patchDst);
+        if (!fs.existsSync(patchDstDir)) {
+          fs.mkdirSync(patchDstDir, { recursive: true });
+        }
+        fs.copyFileSync(path.join(PATCHES_DIR, patchFile), patchDst);
+
+        run(`git add .`);
+        run(`git commit -m "feedback: ${title}"`);
+        run(`git push origin ${branchName}`);
+
+        // Cria PR via gh CLI
+        const labelArgs = labels.map((l) => `--label "${l}"`).join(" ");
+        const bodyEscaped = content
+          .replace(/"/g, '\\"')
+          .substring(0, 65000);
+
+        run(
+          `gh pr create --title "[feedback] ${title}" --body "${bodyEscaped}" --base main ${labelArgs}`,
+          { stdio: "pipe" }
+        );
+
         console.log(c.green(`    ✓ PR criado com sucesso`));
+
+        // Volta pro main
+        run("git checkout main");
 
         // Move patch para processados
         const processed = path.join(PATCHES_DIR, ".processed");
@@ -136,6 +261,7 @@ const commands = {
         );
       } catch (err) {
         console.log(c.red(`    ✗ Erro: ${err.message}`));
+        run("git checkout main");
       }
     }
 
@@ -143,31 +269,46 @@ const commands = {
   },
 
   status() {
-    console.log(c.bold("\n📊 Super Gerots — Status de feedback\n"));
+    console.log(c.bold("\n📊 Super Gerots — Status\n"));
 
-    if (!fs.existsSync(FEEDBACK_FILE)) {
-      console.log(c.yellow("  Nenhum feedback registrado ainda.\n"));
+    // Skills instaladas
+    if (fs.existsSync(SKILLS_TARGET)) {
+      const skills = fs
+        .readdirSync(SKILLS_TARGET, { withFileTypes: true })
+        .filter((d) => d.isDirectory() && d.name !== "patches");
+      console.log(c.bold(`  Skills instaladas: ${skills.length}`));
+      for (const s of skills) {
+        console.log(c.green(`    • ${s.name}`));
+      }
+    } else {
+      console.log(c.yellow("  Nenhuma skill instalada ainda."));
+      console.log("    Execute: npx super-gerots install\n");
       return;
     }
 
-    const content = fs.readFileSync(FEEDBACK_FILE, "utf-8");
-    const entries = content.split("---").filter((e) => e.trim().startsWith("##"));
+    // Feedbacks
+    console.log("");
+    if (!fs.existsSync(FEEDBACK_FILE)) {
+      console.log(c.dim("  Nenhum feedback registrado ainda."));
+    } else {
+      const content = fs.readFileSync(FEEDBACK_FILE, "utf-8");
+      const entries = content.split("---").filter((e) => e.trim().startsWith("##"));
+      const pending = entries.filter((e) => e.includes("Status: pending"));
+      const patched = entries.filter((e) => e.includes("Status: patched"));
 
-    const pending = entries.filter((e) => e.includes("Status: pending"));
-    const patched = entries.filter((e) => e.includes("Status: patched"));
+      console.log(`  Feedbacks: ${entries.length} total`);
+      console.log(c.yellow(`    Pendentes: ${pending.length}`));
+      console.log(c.green(`    Resolvidos: ${patched.length}`));
 
-    console.log(`  Total de feedbacks: ${entries.length}`);
-    console.log(c.yellow(`  Pendentes: ${pending.length}`));
-    console.log(c.green(`  Resolvidos: ${patched.length}`));
-
-    if (pending.length > 0) {
-      console.log(c.bold("\n  Pendentes:\n"));
-      for (const entry of pending.slice(0, 5)) {
-        const firstLine = entry.trim().split("\n")[0];
-        console.log(`    • ${firstLine}`);
-      }
-      if (pending.length > 5) {
-        console.log(`    ... e mais ${pending.length - 5}`);
+      if (pending.length > 0) {
+        console.log(c.bold("\n  Últimos pendentes:"));
+        for (const entry of pending.slice(0, 5)) {
+          const firstLine = entry.trim().split("\n")[0];
+          console.log(`    • ${firstLine}`);
+        }
+        if (pending.length > 5) {
+          console.log(c.dim(`    ... e mais ${pending.length - 5}`));
+        }
       }
     }
 
@@ -185,71 +326,10 @@ const commands = {
         console.log("    Execute: npx super-gerots sync\n");
       }
     }
+
+    console.log("");
   },
 };
-
-// ─── Helpers ───────────────────────────────────────────────────
-function copyDirSync(src, dst) {
-  if (!fs.existsSync(dst)) fs.mkdirSync(dst, { recursive: true });
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const s = path.join(src, entry.name);
-    const d = path.join(dst, entry.name);
-    if (entry.isDirectory()) copyDirSync(s, d);
-    else fs.copyFileSync(s, d);
-  }
-}
-
-function extractTitle(content) {
-  const match = content.match(/^# Patch: (.+)/m);
-  return match ? match[1] : "Feedback patch";
-}
-
-function extractLabels(filename) {
-  const labels = [];
-  if (filename.includes("bug")) labels.push("bug");
-  else if (filename.includes("enhancement")) labels.push("enhancement");
-  else if (filename.includes("new-skill")) labels.push("new-skill");
-  else if (filename.includes("style")) labels.push("style");
-  else if (filename.includes("data-update")) labels.push("data-update");
-  labels.push("auto-feedback");
-  return labels;
-}
-
-function createGitHubPR({ title, body, branch, labels }) {
-  const base = "main";
-
-  // Criar branch, commit, e PR via GitHub API
-  // Aqui usamos curl porque é o que está disponível no ambiente
-  const apiBase = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`;
-  const headers = `-H "Authorization: token ${GITHUB_TOKEN}" -H "Accept: application/vnd.github.v3+json"`;
-
-  // Pega SHA do main
-  const mainRef = JSON.parse(
-    execSync(`curl -s ${headers} ${apiBase}/git/ref/heads/main`).toString()
-  );
-  const sha = mainRef.object.sha;
-
-  // Cria branch
-  execSync(
-    `curl -s ${headers} -X POST ${apiBase}/git/refs -d '${JSON.stringify({
-      ref: `refs/heads/${branch}`,
-      sha,
-    })}'`
-  );
-
-  // Cria PR
-  const prData = JSON.stringify({
-    title,
-    body: body.substring(0, 65000), // GitHub limit
-    head: branch,
-    base,
-    labels,
-  });
-
-  execSync(
-    `curl -s ${headers} -X POST ${apiBase}/pulls -d '${prData}'`
-  );
-}
 
 // ─── Main ──────────────────────────────────────────────────────
 const cmd = process.argv[2] || "install";
@@ -257,7 +337,12 @@ const cmd = process.argv[2] || "install";
 if (commands[cmd]) {
   commands[cmd]();
 } else {
-  console.log(c.red(`Comando desconhecido: ${cmd}`));
-  console.log("Uso: npx super-gerots [install|sync|status]");
+  console.log(c.red(`Comando desconhecido: ${cmd}\n`));
+  console.log("Uso: npx super-gerots <comando>\n");
+  console.log("Comandos:");
+  console.log("  install   Instala/atualiza skills em /mnt/skills/user/");
+  console.log("  sync      Envia patches como PRs no GitHub via gh CLI");
+  console.log("  status    Mostra skills instaladas e feedbacks pendentes");
+  console.log("  setup     Verifica dependências e autenticação\n");
   process.exit(1);
 }

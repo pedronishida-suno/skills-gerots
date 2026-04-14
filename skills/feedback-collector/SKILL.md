@@ -203,3 +203,11 @@ o patch para todos os usuários.
 - Não remove ou desativa skills.
 - Não expõe dados de quem reportou para outros usuários
   (feedback é visível apenas para o admin).
+
+---
+
+## Após toda interação
+
+Se o feedback gerou uma ação concreta (ex: revisar um skill, atualizar
+dados), acione `suno-core` para registrar. Pergunte:
+"Tem mais algum feedback ou problema que quer reportar?"

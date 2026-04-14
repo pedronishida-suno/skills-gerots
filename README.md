@@ -20,6 +20,10 @@ passa a reconhecê-los automaticamente na próxima conversa.
 | `suno-fpa` | FP&A | Variance, forecast, DRE, material de resultado |
 | `suno-marketing` | Marketing | Copy, funil, CAC/LTV, briefing |
 | `suno-consultoria-wealth` | Consultoria/Wealth | Journey Book, suitability, carteira |
+| `suno-research` | Research | Teses, valuation, comparativo, síntese |
+| `suno-assets` | Asset Management | Relatório gerencial, risco, material cotistas |
+| `suno-juridico` | Jurídico/Compliance | Validação, Chinese Wall, contratos, regulatório |
+| `suno-gerrot-navigator` | Performance/FPN | Estratificação L1→L2→L3, causa raiz, OKR |
 | `suno-feedback` | Sistema | Coleta feedback, gera patches automáticos |
 
 ## Arquitetura
@@ -36,6 +40,10 @@ super-gerots/
 │   ├── fpa/SKILL.md         ← FP&A
 │   ├── marketing/SKILL.md   ← Marketing
 │   ├── consultoria-wealth/SKILL.md ← Consultoria e Wealth
+│   ├── research/SKILL.md    ← Research e Análise
+│   ├── assets/SKILL.md      ← Asset Management
+│   ├── juridico/SKILL.md    ← Jurídico e Compliance
+│   ├── gerrot-navigator/SKILL.md ← Estratificação Gerrot/OKR
 │   └── feedback-collector/SKILL.md ← Coleta de feedback
 └── README.md
 ```
@@ -44,8 +52,9 @@ super-gerots/
 
 ```bash
 npx super-gerots install   # Instala/atualiza skills
-npx super-gerots sync      # Envia patches como PRs no GitHub
-npx super-gerots status    # Mostra feedbacks pendentes
+npx super-gerots sync      # Envia patches como PRs no GitHub (via gh CLI)
+npx super-gerots status    # Mostra skills instaladas e feedbacks pendentes
+npx super-gerots setup     # Verifica dependências e autenticação
 ```
 
 ## Feedback loop
@@ -58,12 +67,15 @@ npx super-gerots status    # Mostra feedbacks pendentes
 6. Admin revisa e faz merge
 7. Próximo `npx super-gerots install` traz o patch
 
-## Variáveis de ambiente (para sync)
+## Pré-requisitos (para sync)
 
 ```bash
-export GITHUB_TOKEN=ghp_seu_token
-export GEROTS_REPO_OWNER=seu-usuario
-export GEROTS_REPO_NAME=super-gerots
+# Instale o GitHub CLI
+brew install gh        # macOS
+sudo apt install gh    # Linux
+
+# Autentique
+gh auth login
 ```
 
 ## Output obrigatório
