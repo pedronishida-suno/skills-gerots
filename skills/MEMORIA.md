@@ -44,6 +44,22 @@ Ignorar "Leads Bear" em análises de conversão orgânica. Eles poluem o
 volume de leads e distorcem métricas de intenção de compra. Sempre filtrar
 antes de calcular taxas de conversão.
 
+### Research Intake — Queda de Conversão (Jan–Abr 2026)
+Padrão identificado: queda de conversão visitante→lead na vertical Research
+causada por dois drivers simultâneos:
+1. **Macro**: retração econômica reduzindo apetite por assinaturas de análise
+2. **Percepção de preço**: landing page não responde à objeção de custo
+
+**Benchmarks de referência (Janeiro 2026 — baseline pré-queda):**
+- Taxa visitante→lead: 9,0%
+- Taxa lead→trial: 25,0%
+- Taxa trial→assinante: 20,0%
+
+Quando a taxa visitante→lead cair abaixo de **7%**, acionar diagnóstico
+de funil via `suno-marketing` antes de qualquer ação de tráfego pago.
+O gargalo costuma estar em conversão (L2), não em volume (L3) — verificar
+pela Regra de Pareto antes de aumentar budget.
+
 ---
 
 ## 3. Árvore hierárquica de indicadores (Gerrot/OKR)

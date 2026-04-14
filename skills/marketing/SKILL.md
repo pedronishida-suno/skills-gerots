@@ -81,6 +81,17 @@ Sempre gere pelo menos 2 variações para o usuário escolher.
 6. Sugira ações para cada gargalo.
 7. Registre ações via `suno-core`.
 
+**Benchmarks Research (baseline Jan/2026):**
+- Visitante→Lead: 9,0% (alerta abaixo de 7%)
+- Lead→Trial: 25,0% (alerta abaixo de 20%)
+- Trial→Assinante: 20,0% (alerta abaixo de 15%)
+
+**Padrão de diagnóstico — intake caindo:**
+Quando a queda de conversão superar a queda de tráfego, o problema é de
+percepção de valor/preço na landing page, não de volume. Nesse caso,
+priorizar A/B test de copy (ancoragem de preço, prova social) antes de
+aumentar budget de mídia paga. Ver Regra de Pareto em MEMORIA.md.
+
 ### 3. Análise de CAC/LTV por canal
 
 **Fluxo**:
