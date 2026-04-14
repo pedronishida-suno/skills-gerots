@@ -1,0 +1,21 @@
+{
+  "name": "super-gerots",
+  "version": "1.0.0",
+  "description": "Skills modulares para Claude — Ecossistema Suno S.A.",
+  "bin": {
+    "super-gerots": "./bin/install.js"
+  },
+  "keywords": [
+    "claude",
+    "skills",
+    "suno",
+    "fpa",
+    "ai-assistant"
+  ],
+  "author": "Suno S.A. — Time de Dados e IA",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  }
+}
