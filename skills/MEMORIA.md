@@ -32,7 +32,41 @@ analítica retém no fundo.
 
 ---
 
-## 2. Regras invioláveis
+## 2. Alertas críticos e sazonalidade
+
+### Quebra de Safra — Migração CORE (Agosto/2025)
+Informações anteriores a **Agosto/2025** pertencem ao sistema antigo (CORE).
+Não compare dados brutos pré e pós essa data sem normalização. Qualquer
+análise que cruze esse marco deve emitir alerta ao usuário.
+
+### Leads Bear
+Ignorar "Leads Bear" em análises de conversão orgânica. Eles poluem o
+volume de leads e distorcem métricas de intenção de compra. Sempre filtrar
+antes de calcular taxas de conversão.
+
+---
+
+## 3. Árvore hierárquica de indicadores (Gerrot/OKR)
+
+Metodologia de estratificação obrigatória para análise de performance.
+Sempre investigar do L1 para o L3 — nunca pule níveis.
+
+| Nível | Categoria | Exemplos (FPN) |
+|-------|-----------|----------------|
+| **L1** | Resultado (Final) | Receita Status, Receita Aquisição B3, Receita Mídias, Receita Renovação |
+| **L2** | Eficiência (Alavanca) | ROAS (30 dias), Conversão Lead→Assinante, CTR (E-mail/Criativos), Taxa Conv. LP |
+| **L3** | Esforço (Volume) | Leads Totais, Leads Mídias Pagas, CPL |
+
+**Regra de Pareto (80/20):** nunca proponha ações para indicadores de L3
+se houver desvio crítico em L2. A alavanca sempre está na eficiência
+antes de estar no volume.
+
+**Bonificação Gerrot:** apenas ações com score de relevância > 3.5 são
+elegíveis para a esteira de bonificação extra.
+
+---
+
+## 4. Regras invioláveis
 
 ### Chinese Wall (segregação de atividades)
 A equipe de Research NÃO pode sofrer influência da Asset, e vice-versa.
@@ -56,7 +90,7 @@ Compliance conforme normas da CVM.
 
 ---
 
-## 3. Glossário operacional
+## 5. Glossário operacional
 
 ### Indicadores financeiros
 - **DY (Dividend Yield)**: Proventos 12m / Preço da cota. Central para FIIs.
@@ -89,7 +123,7 @@ Compliance conforme normas da CVM.
 
 ---
 
-## 4. Perfil dos usuários internos
+## 6. Perfil dos usuários internos
 
 | Área                | Perfil técnico          | Nível de prompts | Necessidade de guia |
 |---------------------|-------------------------|-------------------|---------------------|
@@ -104,7 +138,7 @@ com perguntas estruturadas em vez de esperar input livre.
 
 ---
 
-## 5. Output obrigatório (todo skill)
+## 7. Output obrigatório (todo skill)
 
 Toda interação que gere uma ação deve produzir os seguintes campos,
 escritos no Google Sheets centralizado via API:
@@ -148,10 +182,10 @@ Cada dimensão vai de 1 a 5:
 - 2 = Até 1 mês
 - 1 = Mais de 1 mês
 
-Os pesos podem ser ajustados por área:
-- FP&A: Urgência pode pesar 0.4 (fechamentos mensais são críticos)
-- Marketing: Impacto pode pesar 0.6 (campanhas que convertem)
-- Compliance: Urgência pesa 0.5 (deadlines regulatórios)
+Os pesos podem ser ajustados por área (soma sempre = 1.0):
+- FP&A: Urgência 0.4, Esforço 0.1 (fechamentos mensais são críticos)
+- Marketing: Impacto 0.6, Urgência 0.2 (campanhas que convertem)
+- Compliance: Urgência 0.5, Impacto 0.3 (deadlines regulatórios)
 
 ### Bonificação por meta
 Quando todos os campos estão preenchidos E a ação é concluída dentro do
@@ -160,7 +194,7 @@ bonificação. O acumulado é calculado no Sheets centralizado.
 
 ---
 
-## 6. Informações sensíveis
+## 8. Informações sensíveis
 
 Este arquivo contém apenas estrutura e glossário. Dados financeiros reais
 (receita, margem, AUM detalhado, informações de clientes) NÃO devem ser

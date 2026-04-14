@@ -1,6 +1,6 @@
 {
   "name": "super-gerots",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Skills modulares para Claude — Ecossistema Suno S.A.",
   "bin": {
     "super-gerots": "./bin/install.js"
